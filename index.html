@@ -1,10 +1,253 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <title>Hello</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>七夕快乐 · mzyt.fun</title>
+  <style>
+    :root {
+      --bg1: #0b1026;
+      --bg2: #1a2748;
+      --accent: #ff7aa2;
+      --accent2: #ffd1dc;
+      --gold: #ffd166;
+      --text: #ffffff;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: radial-gradient(1200px 800px at 70% 10%, rgba(255,255,255,0.06), transparent 60%),
+                  linear-gradient(180deg, var(--bg1), var(--bg2));
+      overflow: hidden;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC",
+                   "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", "Noto Sans CJK SC",
+                   "Helvetica Neue", Arial, sans-serif;
+      color: var(--text);
+    }
+    /* 中央文案 */
+    .hero {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-content: center;
+      text-align: center;
+      pointer-events: none;
+      padding: 16px;
+    }
+    h1 {
+      font-size: clamp(36px, 8vw, 88px);
+      margin: 0 0 8px 0;
+      line-height: 1.05;
+      letter-spacing: 2px;
+      text-shadow: 0 6px 24px rgba(0,0,0,.6), 0 0 18px rgba(255,122,162,.25);
+      background: linear-gradient(90deg, #fff, var(--accent), #fff);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .subtitle {
+      font-size: clamp(14px, 2.6vw, 22px);
+      opacity: .9;
+      text-shadow: 0 3px 16px rgba(0,0,0,.45);
+    }
+    /* 右下角署名 / 链接 */
+    .badge {
+      position: fixed;
+      right: 12px;
+      bottom: 10px;
+      font-size: 12px;
+      opacity: .75;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 999px;
+      padding: 6px 10px;
+      backdrop-filter: blur(6px);
+    }
+    /* 顶部小星星点缀 */
+    .stars {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 40vh;
+      background-image:
+        radial-gradient(2px 2px at 20% 30%, rgba(255,255,255,.8), rgba(255,255,255,0)),
+        radial-gradient(1.6px 1.6px at 40% 20%, rgba(255,255,255,.7), rgba(255,255,255,0)),
+        radial-gradient(1.8px 1.8px at 65% 15%, rgba(255,255,255,.65), rgba(255,255,255,0)),
+        radial-gradient(1.3px 1.3px at 80% 35%, rgba(255,255,255,.55), rgba(255,255,255,0)),
+        radial-gradient(1.2px 1.2px at 10% 10%, rgba(255,255,255,.8), rgba(255,255,255,0));
+      opacity: .6;
+      pointer-events: none;
+      animation: twinkle 6s linear infinite;
+    }
+    @keyframes twinkle {
+      0%   { opacity: .55; transform: translateY(0); }
+      50%  { opacity: .85; transform: translateY(1px); }
+      100% { opacity: .55; transform: translateY(0); }
+    }
+    /* Canvas 铺满全屏 */
+    #hearts {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    /* 手机底部安全区 */
+    @supports (padding: max(0px)) {
+      .badge { padding-right: max(10px, env(safe-area-inset-right)); }
+    }
+  </style>
 </head>
 <body>
-  <h1>Hello from mzyt.fun 🚀</h1>
+  <div class="stars"></div>
+  <canvas id="hearts"></canvas>
+  <div class="hero" aria-hidden="true">
+    <h1>七夕快乐</h1>
+    <div class="subtitle">愿有岁月可回首，且以深情共白头 ❤</div>
+  </div>
+  <div class="badge">点击 / 轻触 画面，会有更多爱心～</div>
+
+  <script>
+  (() => {
+    const canvas = document.getElementById('hearts');
+    const ctx = canvas.getContext('2d');
+
+    // 设备像素比处理，保证高清不糊
+    const DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    function resize() {
+      const { innerWidth: w, innerHeight: h } = window;
+      canvas.width = Math.floor(w * DPR);
+      canvas.height = Math.floor(h * DPR);
+      canvas.style.width = w + 'px';
+      canvas.style.height = h + 'px';
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    }
+    resize();
+    window.addEventListener('resize', resize, { passive: true });
+
+    // 颜色池（七夕粉系 + 金色点缀）
+    const COLORS = ['#ff5f8f', '#ff3d7f', '#ff77a9', '#ff9eb5', '#ffd1dc', '#ffd166'];
+
+    // 爱心对象
+    class Heart {
+      constructor(x, y, size, speedY, speedX, rot, rotSpeed, color, alpha=0.9) {
+        this.x = x;
+        this.y = y;
+        this.size = size;      // px
+        this.vy = speedY;      // 下落速度
+        this.vx = speedX;      // 横向漂移
+        this.rot = rot;
+        this.vr = rotSpeed;
+        this.color = color;
+        this.alpha = alpha;
+        this.life = 0;         // 用于轻微闪烁
+      }
+      update(dt, w, h) {
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+        this.rot += this.vr * dt;
+        // 轻微摆动（风）
+        this.x += Math.sin((this.life + this.size) * 0.015) * 0.2 * this.size / 12;
+        this.life += dt;
+        // 超出底部则重置到顶部
+        if (this.y - this.size > h + 40) {
+          this.reset(w);
+        }
+      }
+      reset(w) {
+        this.x = Math.random() * w;
+        this.y = -20 - Math.random() * 60;
+        this.size = 8 + Math.random() * 28;
+        this.vy = 15 + Math.random() * 25;   // px/s（会乘以 dt）
+        this.vx = (Math.random() - 0.5) * 14;
+        this.rot = Math.random() * Math.PI;
+        this.vr = (Math.random() - 0.5) * 1.2;
+        this.color = COLORS[(Math.random() * COLORS.length) | 0];
+        this.alpha = 0.8 + Math.random() * 0.2;
+        this.life = 0;
+      }
+      draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rot);
+        const s = this.size;
+        // 绘制心形路径（Bezier 版本，单位尺寸为 1，按像素缩放）
+        ctx.scale(s, s);
+        ctx.beginPath();
+        ctx.moveTo(0, -0.45);
+        ctx.bezierCurveTo(0, -0.85, -0.6, -1.05, -1.0, -0.35);
+        ctx.bezierCurveTo(-1.5, 0.35, -0.7, 1.05, 0, 1.30);
+        ctx.bezierCurveTo(0.7, 1.05, 1.5, 0.35, 1.0, -0.35);
+        ctx.bezierCurveTo(0.6, -1.05, 0, -0.85, 0, -0.45);
+        ctx.closePath();
+        ctx.globalAlpha = this.alpha * (0.92 + Math.sin(this.life * 0.03) * 0.08);
+        ctx.fillStyle = this.color;
+        ctx.shadowColor = this.color;
+        ctx.shadowBlur = 8;
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    const hearts = [];
+    function seed(count) {
+      const { innerWidth: w, innerHeight: h } = window;
+      for (let i = 0; i < count; i++) {
+        const hrt = new Heart(0,0,0,0,0,0,0,'#fff',1);
+        hrt.reset(w);
+        hrt.y = Math.random() * h; // 初始时均匀铺满
+        hearts.push(hrt);
+      }
+    }
+    seed(160); // 初始数量
+
+    // 点击/触摸时，爆出一束爱心
+    function burst(x, y) {
+      for (let i = 0; i < 24; i++) {
+        const size = 10 + Math.random() * 24;
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 40 + Math.random() * 60;
+        const hrt = new Heart(
+          x, y, size,
+          Math.sin(angle) * speed + 12,
+          Math.cos(angle) * speed,
+          Math.random() * Math.PI,
+          (Math.random() - 0.5) * 1.6,
+          COLORS[(Math.random() * COLORS.length) | 0],
+          0.9
+        );
+        hearts.push(hrt);
+      }
+      // 3秒后把新增的散射心逐渐移除，避免数量无限增长
+      setTimeout(() => { hearts.splice(160); }, 3000);
+    }
+
+    function pointer(e) {
+      const t = e.touches ? e.touches[0] : e;
+      const rect = canvas.getBoundingClientRect();
+      burst(t.clientX - rect.left, t.clientY - rect.top);
+    }
+    window.addEventListener('click', pointer);
+    window.addEventListener('touchstart', pointer, { passive: true });
+
+    // 动画主循环
+    let last = performance.now();
+    function frame(now) {
+      const dt = Math.min(40, now - last) / 1000 * 60; // 以 60fps 为基准的时间步长
+      last = now;
+
+      const w = canvas.width / DPR;
+      const h = canvas.height / DPR;
+      ctx.clearRect(0, 0, w, h);
+
+      for (let i = 0; i < hearts.length; i++) {
+        hearts[i].update(dt, w, h);
+        hearts[i].draw(ctx);
+      }
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  })();
+  </script>
 </body>
 </html>
