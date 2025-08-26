@@ -25,94 +25,69 @@
                    "Helvetica Neue", Arial, sans-serif;
       color: var(--text);
     }
-    /* 中央文案 */
-    .hero {
-      position: absolute;
-      inset: 0;
-      display: grid;
-      place-content: center;
-      text-align: center;
-      pointer-events: none;
-      padding: 16px;
-    }
-    h1 {
-      font-size: clamp(36px, 8vw, 88px);
-      margin: 0 0 8px 0;
-      line-height: 1.05;
-      letter-spacing: 2px;
-      text-shadow: 0 6px 24px rgba(0,0,0,.6), 0 0 18px rgba(255,122,162,.25);
-      background: linear-gradient(90deg, #fff, var(--accent), #fff);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-    }
-    .subtitle {
-      font-size: clamp(14px, 2.6vw, 22px);
-      opacity: .9;
-      text-shadow: 0 3px 16px rgba(0,0,0,.45);
-    }
-    /* 右下角署名 / 链接 */
-    .badge {
-      position: fixed;
-      right: 12px;
-      bottom: 10px;
-      font-size: 12px;
-      opacity: .75;
-      background: rgba(255,255,255,.06);
-      border: 1px solid rgba(255,255,255,.1);
-      border-radius: 999px;
-      padding: 6px 10px;
-      backdrop-filter: blur(6px);
-    }
-    /* 顶部小星星点缀 */
     .stars {
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 40vh;
+      position: absolute; top:0; left:0; right:0; height: 40vh;
       background-image:
         radial-gradient(2px 2px at 20% 30%, rgba(255,255,255,.8), rgba(255,255,255,0)),
         radial-gradient(1.6px 1.6px at 40% 20%, rgba(255,255,255,.7), rgba(255,255,255,0)),
         radial-gradient(1.8px 1.8px at 65% 15%, rgba(255,255,255,.65), rgba(255,255,255,0)),
         radial-gradient(1.3px 1.3px at 80% 35%, rgba(255,255,255,.55), rgba(255,255,255,0)),
         radial-gradient(1.2px 1.2px at 10% 10%, rgba(255,255,255,.8), rgba(255,255,255,0));
-      opacity: .6;
-      pointer-events: none;
-      animation: twinkle 6s linear infinite;
+      opacity: .6; pointer-events: none; animation: twinkle 6s linear infinite; z-index:1;
     }
     @keyframes twinkle {
       0%   { opacity: .55; transform: translateY(0); }
       50%  { opacity: .85; transform: translateY(1px); }
       100% { opacity: .55; transform: translateY(0); }
     }
-    /* Canvas 铺满全屏 */
-    #hearts {
-      position: fixed;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      display: block;
+    #hearts { position: fixed; inset: 0; width: 100%; height: 100%; display: block; z-index: 2; }
+    /* 背景弹幕 */
+    #barrage { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 3; }
+    .b-item {
+      position: absolute; white-space: nowrap; color: #fff; font-size: 14px;
+      padding: 6px 10px; border-radius: 999px;
+      background: rgba(255, 122, 162, .18);
+      border: 1px solid rgba(255, 255, 255, .15);
+      backdrop-filter: blur(6px);
+      text-shadow: 0 2px 10px rgba(0,0,0,.35);
+      box-shadow: 0 6px 16px rgba(0,0,0,.25);
+      transform: translateX(100vw); will-change: transform;
     }
-    /* 手机底部安全区 */
-    @supports (padding: max(0px)) {
-      .badge { padding-right: max(10px, env(safe-area-inset-right)); }
+    .hero {
+      position: absolute; inset: 0; display: grid; place-content: center; text-align: center;
+      pointer-events: none; padding: 16px; z-index: 4;
+    }
+    h1 {
+      font-size: clamp(36px, 8vw, 88px); margin: 0 0 8px 0; line-height: 1.05; letter-spacing: 2px;
+      text-shadow: 0 6px 24px rgba(0,0,0,.6), 0 0 18px rgba(255,122,162,.25);
+      background: linear-gradient(90deg, #fff, var(--accent), #fff);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .subtitle { font-size: clamp(14px, 2.6vw, 22px); opacity: .9; text-shadow: 0 3px 16px rgba(0,0,0,.45); }
+    .badge {
+      position: fixed; right: 12px; bottom: 10px; font-size: 12px; opacity: .75;
+      background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
+      border-radius: 999px; padding: 6px 10px; backdrop-filter: blur(6px); z-index: 6;
     }
   </style>
 </head>
 <body>
   <div class="stars"></div>
   <canvas id="hearts"></canvas>
+  <div id="barrage" aria-hidden="true"></div>
+
   <div class="hero" aria-hidden="true">
     <h1>七夕快乐</h1>
     <div class="subtitle">愿有岁月可回首，且以深情共白头 ❤</div>
   </div>
+
   <div class="badge">点击 / 轻触 画面，会有更多爱心～</div>
 
   <script>
   (() => {
+    /** 飘心背景 */
     const canvas = document.getElementById('hearts');
     const ctx = canvas.getContext('2d');
-
-    // 设备像素比处理，保证高清不糊
     const DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
     function resize() {
       const { innerWidth: w, innerHeight: h } = window;
@@ -124,55 +99,31 @@
     }
     resize();
     window.addEventListener('resize', resize, { passive: true });
-
-    // 颜色池（七夕粉系 + 金色点缀）
     const COLORS = ['#ff5f8f', '#ff3d7f', '#ff77a9', '#ff9eb5', '#ffd1dc', '#ffd166'];
-
-    // 爱心对象
     class Heart {
       constructor(x, y, size, speedY, speedX, rot, rotSpeed, color, alpha=0.9) {
-        this.x = x;
-        this.y = y;
-        this.size = size;      // px
-        this.vy = speedY;      // 下落速度
-        this.vx = speedX;      // 横向漂移
-        this.rot = rot;
-        this.vr = rotSpeed;
-        this.color = color;
-        this.alpha = alpha;
-        this.life = 0;         // 用于轻微闪烁
+        this.x = x; this.y = y; this.size = size;
+        this.vy = speedY; this.vx = speedX;
+        this.rot = rot; this.vr = rotSpeed;
+        this.color = color; this.alpha = alpha; this.life = 0;
       }
       update(dt, w, h) {
-        this.x += this.vx * dt;
-        this.y += this.vy * dt;
-        this.rot += this.vr * dt;
-        // 轻微摆动（风）
+        this.x += this.vx * dt; this.y += this.vy * dt; this.rot += this.vr * dt;
         this.x += Math.sin((this.life + this.size) * 0.015) * 0.2 * this.size / 12;
         this.life += dt;
-        // 超出底部则重置到顶部
-        if (this.y - this.size > h + 40) {
-          this.reset(w);
-        }
+        if (this.y - this.size > h + 40) this.reset(w);
       }
       reset(w) {
-        this.x = Math.random() * w;
-        this.y = -20 - Math.random() * 60;
+        this.x = Math.random() * w; this.y = -20 - Math.random() * 60;
         this.size = 8 + Math.random() * 28;
-        this.vy = 15 + Math.random() * 25;   // px/s（会乘以 dt）
-        this.vx = (Math.random() - 0.5) * 14;
-        this.rot = Math.random() * Math.PI;
-        this.vr = (Math.random() - 0.5) * 1.2;
+        this.vy = 15 + Math.random() * 25; this.vx = (Math.random() - 0.5) * 14;
+        this.rot = Math.random() * Math.PI; this.vr = (Math.random() - 0.5) * 1.2;
         this.color = COLORS[(Math.random() * COLORS.length) | 0];
-        this.alpha = 0.8 + Math.random() * 0.2;
-        this.life = 0;
+        this.alpha = 0.8 + Math.random() * 0.2; this.life = 0;
       }
       draw(ctx) {
-        ctx.save();
-        ctx.translate(this.x, this.y);
-        ctx.rotate(this.rot);
-        const s = this.size;
-        // 绘制心形路径（Bezier 版本，单位尺寸为 1，按像素缩放）
-        ctx.scale(s, s);
+        ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.rot);
+        const s = this.size; ctx.scale(s, s);
         ctx.beginPath();
         ctx.moveTo(0, -0.45);
         ctx.bezierCurveTo(0, -0.85, -0.6, -1.05, -1.0, -0.35);
@@ -181,27 +132,19 @@
         ctx.bezierCurveTo(0.6, -1.05, 0, -0.85, 0, -0.45);
         ctx.closePath();
         ctx.globalAlpha = this.alpha * (0.92 + Math.sin(this.life * 0.03) * 0.08);
-        ctx.fillStyle = this.color;
-        ctx.shadowColor = this.color;
-        ctx.shadowBlur = 8;
-        ctx.fill();
+        ctx.fillStyle = this.color; ctx.shadowColor = this.color; ctx.shadowBlur = 8; ctx.fill();
         ctx.restore();
       }
     }
-
     const hearts = [];
     function seed(count) {
       const { innerWidth: w, innerHeight: h } = window;
       for (let i = 0; i < count; i++) {
         const hrt = new Heart(0,0,0,0,0,0,0,'#fff',1);
-        hrt.reset(w);
-        hrt.y = Math.random() * h; // 初始时均匀铺满
-        hearts.push(hrt);
+        hrt.reset(w); hrt.y = Math.random() * h; hearts.push(hrt);
       }
     }
-    seed(160); // 初始数量
-
-    // 点击/触摸时，爆出一束爱心
+    seed(160);
     function burst(x, y) {
       for (let i = 0; i < 24; i++) {
         const size = 10 + Math.random() * 24;
@@ -218,10 +161,8 @@
         );
         hearts.push(hrt);
       }
-      // 3秒后把新增的散射心逐渐移除，避免数量无限增长
       setTimeout(() => { hearts.splice(160); }, 3000);
     }
-
     function pointer(e) {
       const t = e.touches ? e.touches[0] : e;
       const rect = canvas.getBoundingClientRect();
@@ -229,24 +170,62 @@
     }
     window.addEventListener('click', pointer);
     window.addEventListener('touchstart', pointer, { passive: true });
-
-    // 动画主循环
     let last = performance.now();
     function frame(now) {
-      const dt = Math.min(40, now - last) / 1000 * 60; // 以 60fps 为基准的时间步长
-      last = now;
-
-      const w = canvas.width / DPR;
-      const h = canvas.height / DPR;
+      const dt = Math.min(40, now - last) / 1000 * 60; last = now;
+      const w = canvas.width / DPR; const h = canvas.height / DPR;
       ctx.clearRect(0, 0, w, h);
-
-      for (let i = 0; i < hearts.length; i++) {
-        hearts[i].update(dt, w, h);
-        hearts[i].draw(ctx);
-      }
+      for (let i = 0; i < hearts.length; i++) { hearts[i].update(dt, w, h); hearts[i].draw(ctx); }
       requestAnimationFrame(frame);
     }
     requestAnimationFrame(frame);
+
+    /** 背景弹幕（只显示预置句子，无需输入） */
+    const barrage = document.getElementById('barrage');
+    const SENTENCES = [
+      "愿有岁月可回首，且以深情共白头",
+      "执子之手，与子偕老",
+      "今夕何夕，见此良人",
+      "人间值得，所幸有你",
+      "情不知所起，一往而深",
+      "与你共赴，山海皆可平",
+      "星河滚烫，你是人间理想",
+      "良辰美景，与你同赏",
+      "见山是你，见海是你",
+      "在所有不见的风景里，我最想见你",
+      "与你相遇，三生有幸",
+      "我想和你一起看尽人间烟火",
+      "心中有你，便是良辰美景",
+      "有你在的地方，就是家",
+      "七夕快乐，爱你永远",
+      "山河远阔，人间烟火，你是我唯一的心动",
+      "陪你看日出，伴你到黄昏",
+      "我的心为你而跳动",
+      "岁岁年年，朝朝暮暮",
+      "我愿意，千山万水只为你",
+      "牵你的手，走到白头",
+      "爱你，是我此生不变的誓言",
+      "月色真美，不及你笑颜",
+      "七夕有你，星河都浪漫",
+      "你的名字，是我心中最美的诗"
+    ];
+    let idx = 0;
+    function launchOne() {
+      const text = SENTENCES[idx++ % SENTENCES.length];
+      const div = document.createElement('div');
+      div.className = 'b-item';
+      div.textContent = text;
+      const top = Math.random() * (window.innerHeight * 0.8) + window.innerHeight * 0.1;
+      const duration = 12 + Math.random() * 10; // s
+      const delay = Math.random() * 1.5;
+      div.style.top = `${top}px`;
+      div.style.transition = `transform ${duration}s linear ${delay}s, opacity .6s`;
+      barrage.appendChild(div);
+      requestAnimationFrame(() => { div.style.transform = `translateX(-120vw)`; });
+      setTimeout(() => { div.style.opacity = '0'; setTimeout(() => div.remove(), 800); }, (duration + delay) * 1000);
+    }
+    setInterval(launchOne, 600);
+    for (let i = 0; i < 8; i++) launchOne();
   })();
   </script>
 </body>
